@@ -24,17 +24,19 @@
             ['route' => 'audits.index', 'pattern' => 'audits.*', 'icon' => 'bi-clipboard2-check', 'label' => 'Audits & Assurance'],
             ['route' => 'calendar.index', 'pattern' => 'calendar.*', 'icon' => 'bi-calendar3', 'label' => 'Compliance Calendar'],
         ],
-        'Practice Operations' => [
+        'Practice Operations' => array_values(array_filter([
             ['route' => 'documents.index', 'pattern' => 'documents.*', 'icon' => 'bi-folder2-open', 'label' => 'Document Vault'],
             ['route' => 'tasks.index', 'pattern' => 'tasks.*', 'icon' => 'bi-kanban', 'label' => 'Tasks & Workflow'],
-            ['route' => 'billing.index', 'pattern' => 'billing.*', 'icon' => 'bi-cash-coin', 'label' => 'Billing & Invoices'],
-            ['route' => 'staff.index', 'pattern' => 'staff.*', 'icon' => 'bi-people', 'label' => 'Staff & Workload'],
+            ($user && $user->isManagerOrAbove()) ? ['route' => 'billing.index', 'pattern' => 'billing.*', 'icon' => 'bi-cash-coin', 'label' => 'Billing & Invoices'] : null,
+            ($user && $user->isManagerOrAbove()) ? ['route' => 'staff.index', 'pattern' => 'staff.*', 'icon' => 'bi-people', 'label' => 'Staff & Workload'] : null,
             ['route' => 'communications.index', 'pattern' => 'communications.*', 'icon' => 'bi-chat-dots', 'label' => 'Communications'],
-        ],
-        'Insights & Admin' => [
-            ['route' => 'reports.index', 'pattern' => 'reports.*', 'icon' => 'bi-graph-up-arrow', 'label' => 'Reports & Exports'],
-        ],
+        ])),
     ];
+    if ($user && $user->isManagerOrAbove()) {
+        $navItems['Insights & Admin'] = [
+            ['route' => 'reports.index', 'pattern' => 'reports.*', 'icon' => 'bi-graph-up-arrow', 'label' => 'Reports & Exports'],
+        ];
+    }
     if ($user && $user->isAdminOrPartner()) {
         $navItems['Insights & Admin'][] = ['route' => 'settings.index', 'pattern' => 'settings.*', 'icon' => 'bi-sliders', 'label' => 'Settings & Audit Logs'];
     }
@@ -116,8 +118,12 @@
                         <i class="bi bi-plus-lg me-1"></i> Quick Add
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li><a class="dropdown-item" href="{{ route('clients.create') }}"><i class="bi bi-building-add me-2 text-primary"></i>New Client</a></li>
-                        <li><a class="dropdown-item" href="{{ route('billing.create') }}"><i class="bi bi-receipt me-2 text-success"></i>New Invoice</a></li>
+                        @if($user && $user->isManagerOrAbove())
+                            <li><a class="dropdown-item" href="{{ route('clients.create') }}"><i class="bi bi-building-add me-2 text-primary"></i>New Client</a></li>
+                        @endif
+                        @if($user && $user->isAdminOrPartner())
+                            <li><a class="dropdown-item" href="{{ route('billing.create') }}"><i class="bi bi-receipt me-2 text-success"></i>New Invoice</a></li>
+                        @endif
                         <li><a class="dropdown-item" href="{{ route('tasks.index') }}"><i class="bi bi-check2-square me-2 text-info"></i>New Task</a></li>
                         <li><a class="dropdown-item" href="{{ route('documents.index') }}"><i class="bi bi-file-earmark-arrow-up me-2 text-warning"></i>Request Document</a></li>
                     </ul>

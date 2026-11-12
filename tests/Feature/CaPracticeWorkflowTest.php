@@ -336,4 +336,44 @@ class CaPracticeWorkflowTest extends TestCase
         $this->actingAs($admin)->get(route('tasks.show', $task))->assertOk();
         $this->actingAs($admin)->get(route('clients.edit', $client))->assertOk();
     }
+
+    public function test_each_staff_role_sees_role_specific_dashboard(): void
+    {
+        $admin = User::where('email', 'admin@auditflow.in')->firstOrFail();
+        $partner = User::where('email', 'partner@auditflow.in')->firstOrFail();
+        $manager = User::where('email', 'manager@auditflow.in')->firstOrFail();
+        $employee = User::where('email', 'employee@auditflow.in')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Executive &amp; System Control Dashboard', false)
+            ->assertSee('Monthly Revenue')
+            ->assertSee('Settings &amp; Audit Logs', false);
+
+        $this->actingAs($partner)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Partner Practice &amp; Assurance Dashboard', false)
+            ->assertSee('Audits in Progress & Sign-Off', false)
+            ->assertSee('Monthly Revenue');
+
+        $this->actingAs($manager)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Operations &amp; Team Delivery Dashboard', false)
+            ->assertSee('Tasks Under Review')
+            ->assertDontSee('Monthly Revenue')
+            ->assertDontSee('Outstanding Fees');
+
+        $this->actingAs($employee)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('My Work &amp; Assigned Clients Dashboard', false)
+            ->assertSee('My Active Task Queue')
+            ->assertDontSee('Monthly Revenue')
+            ->assertDontSee('Outstanding Fees')
+            ->assertDontSee('Billing &amp; Invoices', false)
+            ->assertDontSee('Settings &amp; Audit Logs', false);
+    }
 }
