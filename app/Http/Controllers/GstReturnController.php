@@ -22,10 +22,17 @@ class GstReturnController extends Controller
 
     public function index(Request $request): View
     {
-        $visibleClientIds = $this->clientAccess->visibleClientsQuery($request->user())->pluck('id');
+        $user = $request->user();
+        $visibleClientIds = $this->clientAccess->visibleClientsQuery($user)->pluck('id');
 
         $query = GstReturn::with(['client', 'assignee', 'returnType'])
             ->whereIn('client_id', $visibleClientIds);
+
+        if ($user->hasRole(User::ROLE_EMPLOYEE)) {
+            $query->where(function ($q) use ($user) {
+                $q->where('assigned_to', $user->id)->orWhereNull('assigned_to');
+            });
+        }
 
         if ($clientId = $request->query('client_id')) {
             $query->where('client_id', $clientId);

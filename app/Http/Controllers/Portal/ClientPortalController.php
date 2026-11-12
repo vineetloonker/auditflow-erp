@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
-use App\Models\Invoice;
 use App\Models\FirmSetting;
+use App\Models\Invoice;
 use App\Services\ClientAccessService;
 use App\Services\CommunicationService;
 use App\Services\DocumentStorageService;
@@ -27,49 +27,81 @@ class ClientPortalController extends Controller
 
     public function dashboard(Request $request): View
     {
-        $client = $this->clientAccess->resolveClientForPortalUser($request->user());
+        $companies = $this->clientAccess->portalClientsQuery($request->user())
+            ->with('assignedCa')
+            ->orderBy('name')
+            ->get();
 
-        $pendingDocs = $client->documents()->whereIn('status', ['requested', 'rejected'])->orderBy('due_date')->get();
-        $gstReturns = $client->gstReturns()->orderByDesc('due_date')->limit(5)->get();
-        $itrFilings = $client->itrFilings()->orderByDesc('assessment_year')->limit(5)->get();
-        $deadlines = $client->deadlines()->where('status', '!=', 'completed')->orderBy('due_date')->limit(6)->get();
-        $outstandingBalance = $client->outstandingBalance();
-        $recentInvoices = $client->invoices()->latest('invoice_date')->limit(5)->get();
+        abort_if($companies->isEmpty(), 404);
+
+        $client = $companies->first();
+        $clientIds = $companies->pluck('id');
+
+        $pendingDocs = Document::with('client')
+            ->whereIn('client_id', $clientIds)
+            ->where('is_shared_with_client', true)
+            ->whereIn('status', ['requested', 'rejected'])
+            ->orderBy('due_date')
+            ->get();
+
+        $recentDocs = Document::with('client')
+            ->whereIn('client_id', $clientIds)
+            ->where('is_shared_with_client', true)
+            ->latest()
+            ->limit(8)
+            ->get();
 
         return view('portal.dashboard', compact(
             'client',
+            'companies',
             'pendingDocs',
-            'gstReturns',
-            'itrFilings',
-            'deadlines',
-            'outstandingBalance',
-            'recentInvoices'
+            'recentDocs'
         ));
     }
 
     public function profile(Request $request): View
     {
-        $client = $this->clientAccess->resolveClientForPortalUser($request->user());
-        $client->load('assignedCa');
+        $companies = $this->clientAccess->portalClientsQuery($request->user())
+            ->with('assignedCa')
+            ->orderBy('name')
+            ->get();
 
-        return view('portal.profile', compact('client'));
+        abort_if($companies->isEmpty(), 404);
+
+        $client = $companies->first();
+
+        return view('portal.profile', compact('client', 'companies'));
     }
 
     public function documents(Request $request): View
     {
-        $client = $this->clientAccess->resolveClientForPortalUser($request->user());
-        $documents = $client->documents()
-            ->where('is_shared_with_client', true)
-            ->with(['versions', 'requester'])
-            ->latest()
-            ->paginate(15);
+        $companies = $this->clientAccess->portalClientsQuery($request->user())
+            ->orderBy('name')
+            ->get();
 
-        return view('portal.documents', compact('client', 'documents'));
+        abort_if($companies->isEmpty(), 404);
+
+        $client = $companies->first();
+        $clientIds = $companies->pluck('id');
+
+        $query = Document::whereIn('client_id', $clientIds)
+            ->where('is_shared_with_client', true)
+            ->with(['client', 'versions', 'requester']);
+
+        if ($selectedClientId = $request->query('client_id')) {
+            abort_unless($clientIds->contains((int) $selectedClientId), 403);
+            $query->where('client_id', $selectedClientId);
+        }
+
+        $documents = $query->latest()->paginate(15)->withQueryString();
+
+        return view('portal.documents', compact('client', 'companies', 'documents'));
     }
 
     public function uploadDocument(Request $request): RedirectResponse
     {
-        $client = $this->clientAccess->resolveClientForPortalUser($request->user());
+        $clientIds = $this->clientAccess->portalClientIds($request->user());
+        abort_if($clientIds->isEmpty(), 404);
 
         if ($request->filled('document_id')) {
             $request->validate([
@@ -78,21 +110,27 @@ class ClientPortalController extends Controller
                 'notes' => ['nullable', 'string', 'max:1000'],
             ]);
 
-            $doc = $client->documents()->where('id', $request->input('document_id'))->firstOrFail();
+            $doc = Document::whereIn('client_id', $clientIds)
+                ->where('id', $request->input('document_id'))
+                ->firstOrFail();
+
             $this->storageService->storeUpload($doc, $request->file('file'), $request->user()->id, $request->input('notes'));
 
             return back()->with('success', "Uploaded '{$doc->title}' successfully.");
         }
 
         $validated = $request->validate([
+            'client_id' => ['nullable', 'integer', Rule::in($clientIds->all())],
             'title' => ['required', 'string', 'max:255'],
             'category' => ['required', Rule::in(array_keys(Document::CATEGORIES))],
             'file' => ['required', 'file', 'max:20480'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $targetClientId = (int) ($validated['client_id'] ?? $clientIds->first());
+
         $doc = Document::create([
-            'client_id' => $client->id,
+            'client_id' => $targetClientId,
             'title' => $validated['title'],
             'category' => $validated['category'],
             'status' => 'uploaded',
@@ -106,8 +144,8 @@ class ClientPortalController extends Controller
 
     public function downloadDocument(Request $request, Document $document): StreamedResponse
     {
-        $client = $this->clientAccess->resolveClientForPortalUser($request->user());
-        abort_unless((int) $document->client_id === (int) $client->id && $document->is_shared_with_client, 403);
+        $clientIds = $this->clientAccess->portalClientIds($request->user());
+        abort_unless($clientIds->contains((int) $document->client_id) && $document->is_shared_with_client, 403);
 
         return $this->storageService->download($document);
     }
@@ -134,8 +172,8 @@ class ClientPortalController extends Controller
 
     public function downloadInvoicePdf(Request $request, Invoice $invoice): Response
     {
-        $client = $this->clientAccess->resolveClientForPortalUser($request->user());
-        abort_unless((int) $invoice->client_id === (int) $client->id, 403);
+        $clientIds = $this->clientAccess->portalClientIds($request->user());
+        abort_unless($clientIds->contains((int) $invoice->client_id), 403);
 
         $invoice->load(['client', 'items', 'payments']);
         $firm = FirmSetting::allAsMap();
@@ -170,4 +208,3 @@ class ClientPortalController extends Controller
         return back()->with('success', 'Message sent to your CA firm.');
     }
 }
-

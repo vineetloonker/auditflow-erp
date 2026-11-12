@@ -25,8 +25,8 @@ class AuditController extends Controller
     public function index(Request $request): View
     {
         $visibleClientIds = $this->clientAccess->visibleClientsQuery($request->user())->pluck('id');
-        $query = Audit::with(['client', 'leadAuditor', 'teamMembers', 'workingPapers'])
-            ->whereIn('client_id', $visibleClientIds);
+        $query = $this->clientAccess->visibleAuditsQuery($request->user())
+            ->with(['client', 'leadAuditor', 'teamMembers', 'workingPapers']);
 
         if ($clientId = $request->query('client_id')) {
             $query->where('client_id', $clientId);
@@ -47,7 +47,7 @@ class AuditController extends Controller
 
     public function show(Request $request, Audit $audit): View
     {
-        abort_unless($this->clientAccess->canAccessClient($request->user(), $audit->client), 403);
+        abort_unless($this->clientAccess->canAccessAudit($request->user(), $audit), 403);
         $audit->load(['client', 'leadAuditor', 'approver', 'teamMembers', 'workingPapers.uploader']);
         $staff = User::staff()->active()->orderBy('name')->get();
 
@@ -99,7 +99,7 @@ class AuditController extends Controller
 
     public function update(Request $request, Audit $audit): RedirectResponse
     {
-        abort_unless($this->clientAccess->canAccessClient($request->user(), $audit->client), 403);
+        abort_unless($this->clientAccess->canAccessAudit($request->user(), $audit), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -152,7 +152,7 @@ class AuditController extends Controller
 
     public function uploadWorkingPaper(Request $request, Audit $audit): RedirectResponse
     {
-        abort_unless($this->clientAccess->canAccessClient($request->user(), $audit->client), 403);
+        abort_unless($this->clientAccess->canAccessAudit($request->user(), $audit), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -181,15 +181,17 @@ class AuditController extends Controller
 
     public function downloadWorkingPaper(Request $request, Audit $audit, AuditWorkingPaper $paper): StreamedResponse
     {
-        abort_unless($this->clientAccess->canAccessClient($request->user(), $audit->client), 403);
+        abort_unless($this->clientAccess->canAccessAudit($request->user(), $audit), 403);
         abort_unless((int) $paper->audit_id === (int) $audit->id, 404);
         abort_unless(Storage::disk('local')->exists($paper->file_path), 404);
 
         return Storage::disk('local')->download($paper->file_path, $paper->original_filename);
     }
 
-    public function destroy(Audit $audit): RedirectResponse
+    public function destroy(Request $request, Audit $audit): RedirectResponse
     {
+        abort_unless($this->clientAccess->canAccessAudit($request->user(), $audit), 403);
+
         $audit->delete();
 
         return redirect()->route('audits.index')->with('success', 'Audit assignment deleted.');

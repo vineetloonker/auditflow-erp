@@ -31,12 +31,8 @@ class TaskController extends Controller
         $visibleClientIds = $this->clientAccess->visibleClientsQuery($request->user())->pluck('id');
         $viewMode = $request->query('view', 'kanban');
 
-        $query = Task::with(['client', 'assignee', 'creator'])
-            ->where(function ($q) use ($visibleClientIds, $request) {
-                $q->whereNull('client_id')
-                    ->orWhereIn('client_id', $visibleClientIds)
-                    ->orWhere('assigned_to', $request->user()->id);
-            });
+        $query = $this->clientAccess->visibleTasksQuery($request->user())
+            ->with(['client', 'assignee', 'creator']);
 
         if ($clientId = $request->query('client_id')) {
             $query->where('client_id', $clientId);
@@ -67,11 +63,13 @@ class TaskController extends Controller
         return view('tasks.index', compact('tasks', 'viewMode', 'clients', 'staff'));
     }
 
-    public function show(Task $task): View
+    public function show(Request $request, Task $task): View
     {
+        abort_unless($this->clientAccess->canAccessTask($request->user(), $task), 403);
+
         $task->load(['client', 'assignee', 'creator', 'approver', 'comments.user', 'attachments.user', 'activities.user']);
         $staff = User::staff()->active()->orderBy('name')->get();
-        $clients = Client::orderBy('name')->get();
+        $clients = $this->clientAccess->visibleClientsQuery($request->user())->orderBy('name')->get();
 
         return view('tasks.show', compact('task', 'staff', 'clients'));
     }
@@ -88,6 +86,11 @@ class TaskController extends Controller
             'status' => ['required', Rule::in(array_keys(Task::STATUSES))],
             'due_date' => ['nullable', 'date'],
         ]);
+
+        if (!empty($validated['client_id'])) {
+            $client = Client::findOrFail($validated['client_id']);
+            abort_unless($this->clientAccess->canAccessClient($request->user(), $client), 403);
+        }
 
         $task = Task::create([
             ...$validated,
@@ -118,6 +121,8 @@ class TaskController extends Controller
 
     public function update(Request $request, Task $task): RedirectResponse
     {
+        abort_unless($this->clientAccess->canAccessTask($request->user(), $task), 403);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
@@ -156,6 +161,8 @@ class TaskController extends Controller
 
     public function updateStatus(Request $request, Task $task): JsonResponse|RedirectResponse
     {
+        abort_unless($this->clientAccess->canAccessTask($request->user(), $task), 403);
+
         $validated = $request->validate([
             'status' => ['required', Rule::in(array_keys(Task::STATUSES))],
         ]);
@@ -184,6 +191,8 @@ class TaskController extends Controller
 
     public function addComment(Request $request, Task $task): RedirectResponse
     {
+        abort_unless($this->clientAccess->canAccessTask($request->user(), $task), 403);
+
         $validated = $request->validate([
             'comment' => ['required', 'string', 'max:3000'],
             'is_internal' => ['nullable', 'boolean'],
@@ -208,6 +217,8 @@ class TaskController extends Controller
 
     public function addAttachment(Request $request, Task $task): RedirectResponse
     {
+        abort_unless($this->clientAccess->canAccessTask($request->user(), $task), 403);
+
         $request->validate([
             'file' => ['required', 'file', 'max:20480'],
         ]);
@@ -234,16 +245,19 @@ class TaskController extends Controller
         return back()->with('success', 'Attachment uploaded.');
     }
 
-    public function downloadAttachment(Task $task, TaskAttachment $attachment): StreamedResponse
+    public function downloadAttachment(Request $request, Task $task, TaskAttachment $attachment): StreamedResponse
     {
+        abort_unless($this->clientAccess->canAccessTask($request->user(), $task), 403);
         abort_unless((int) $attachment->task_id === (int) $task->id, 404);
         abort_unless(Storage::disk('local')->exists($attachment->file_path), 404);
 
         return Storage::disk('local')->download($attachment->file_path, $attachment->original_filename);
     }
 
-    public function destroy(Task $task): RedirectResponse
+    public function destroy(Request $request, Task $task): RedirectResponse
     {
+        abort_unless($this->clientAccess->canAccessTask($request->user(), $task), 403);
+
         $task->delete();
 
         return redirect()->route('tasks.index')->with('success', 'Task deleted.');

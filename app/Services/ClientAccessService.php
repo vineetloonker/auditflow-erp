@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Audit;
 use App\Models\Client;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * Enforces role-based client & work visibility across staff and client portal users.
@@ -23,7 +26,6 @@ class ClientAccessService
             return $query->where('user_id', $user->id);
         }
 
-        // Managers and employees see clients assigned to them (primary CA or secondary staff)
         if ($user->hasRole(User::ROLE_MANAGER)) {
             return $query;
         }
@@ -48,11 +50,82 @@ class ClientAccessService
             || $client->staff()->where('users.id', $user->id)->exists();
     }
 
+    public function visibleTasksQuery(User $user): Builder
+    {
+        $query = Task::query();
+
+        if ($user->isManagerOrAbove()) {
+            return $query;
+        }
+
+        if ($user->isClient()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $q) use ($user) {
+            $q->where('assigned_to', $user->id)
+                ->orWhere('created_by', $user->id);
+        });
+    }
+
+    public function canAccessTask(User $user, Task $task): bool
+    {
+        if ($user->isManagerOrAbove()) {
+            return true;
+        }
+
+        if ($user->isClient()) {
+            return false;
+        }
+
+        return (int) $task->assigned_to === (int) $user->id
+            || (int) $task->created_by === (int) $user->id;
+    }
+
+    public function visibleAuditsQuery(User $user): Builder
+    {
+        $query = Audit::query();
+
+        if ($user->isManagerOrAbove()) {
+            return $query;
+        }
+
+        if ($user->isClient()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $q) use ($user) {
+            $q->where('lead_auditor_id', $user->id)
+                ->orWhereHas('teamMembers', fn (Builder $tq) => $tq->where('users.id', $user->id));
+        });
+    }
+
+    public function canAccessAudit(User $user, Audit $audit): bool
+    {
+        if ($user->isManagerOrAbove()) {
+            return true;
+        }
+
+        if ($user->isClient()) {
+            return false;
+        }
+
+        return (int) $audit->lead_auditor_id === (int) $user->id
+            || $audit->teamMembers()->where('users.id', $user->id)->exists();
+    }
+
+    public function portalClientsQuery(User $user): Builder
+    {
+        return Client::query()->where('user_id', $user->id);
+    }
+
+    public function portalClientIds(User $user): Collection
+    {
+        return $this->portalClientsQuery($user)->pluck('id');
+    }
+
     public function resolveClientForPortalUser(User $user): Client
     {
-        return Client::query()
-            ->where('user_id', $user->id)
-            ->firstOrFail();
+        return $this->portalClientsQuery($user)->firstOrFail();
     }
 }
-

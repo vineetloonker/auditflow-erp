@@ -52,19 +52,19 @@ class DashboardController extends Controller
                 ->limit(15)
                 ->get();
 
-            $tasks = Task::with('client')
-                ->where(function ($query) use ($visibleClientIds, $user) {
-                    $query->whereIn('client_id', $visibleClientIds)->orWhere('assigned_to', $user->id);
-                })
+            $tasks = $this->clientAccess->visibleTasksQuery($user)
+                ->with('client')
                 ->where('title', 'like', "%{$q}%")
                 ->limit(15)
                 ->get();
 
-            $invoices = Invoice::with('client')
-                ->whereIn('client_id', $visibleClientIds)
-                ->where('invoice_number', 'like', "%{$q}%")
-                ->limit(15)
-                ->get();
+            if ($user->isManagerOrAbove()) {
+                $invoices = Invoice::with('client')
+                    ->whereIn('client_id', $visibleClientIds)
+                    ->where('invoice_number', 'like', "%{$q}%")
+                    ->limit(15)
+                    ->get();
+            }
         }
 
         return view('dashboard.search', compact('q', 'clients', 'tasks', 'invoices'));

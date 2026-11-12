@@ -20,11 +20,8 @@
         <div class="collapse navbar-collapse" id="portalNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-lg-1">
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.dashboard') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.dashboard') }}">Overview</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.documents') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.documents') }}">Documents</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.filings') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.filings') }}">Filings & Deadlines</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.invoices') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.invoices') }}">Invoices</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.messages') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.messages') }}">Messages</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.profile') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.profile') }}">Profile</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.profile') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.profile') }}">My Companies</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->routeIs('portal.documents') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('portal.documents') }}">My Documents</a></li>
             </ul>
             <div class="d-flex align-items-center gap-3">
                 <span class="small text-muted">{{ $user->name }}</span>
