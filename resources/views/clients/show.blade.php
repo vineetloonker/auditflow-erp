@@ -59,6 +59,7 @@
                     <dt class="col-sm-4 text-muted">GSTIN</dt><dd class="col-sm-8">{{ $client->gstin ?? '—' }}</dd>
                     <dt class="col-sm-4 text-muted">TAN</dt><dd class="col-sm-8">{{ $client->tan ?? '—' }}</dd>
                     <dt class="col-sm-4 text-muted">CIN</dt><dd class="col-sm-8">{{ $client->cin ?? '—' }}</dd>
+                    <dt class="col-sm-4 text-muted">LLPIN</dt><dd class="col-sm-8">{{ $client->llpin ?? '—' }}</dd>
                     <dt class="col-sm-4 text-muted">Business / Industry</dt><dd class="col-sm-8">{{ $client->business_type ?? '—' }} @if($client->industry) ({{ $client->industry }}) @endif</dd>
                     <dt class="col-sm-4 text-muted">Registration Date</dt><dd class="col-sm-8">{{ $client->registration_date?->format('d M Y') ?? '—' }}</dd>
                 </dl>

@@ -49,9 +49,13 @@
         <label class="form-label small fw-semibold">TAN</label>
         <input type="text" name="tan" value="{{ old('tan', $client?->tan) }}" class="form-control text-uppercase">
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label class="form-label small fw-semibold">CIN</label>
         <input type="text" name="cin" value="{{ old('cin', $client?->cin) }}" class="form-control text-uppercase">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small fw-semibold">LLPIN</label>
+        <input type="text" name="llpin" value="{{ old('llpin', $client?->llpin) }}" class="form-control text-uppercase">
     </div>
 
     <div class="col-md-4">

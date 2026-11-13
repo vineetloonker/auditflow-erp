@@ -13,6 +13,7 @@ class ComplianceDeadline extends Model
         'tds' => 'TDS',
         'advance_tax' => 'Advance Tax',
         'roc' => 'ROC Compliance',
+        'llp' => 'LLP Compliance',
         'audit' => 'Audit',
         'custom' => 'Custom Reminder',
     ];
@@ -26,6 +27,7 @@ class ComplianceDeadline extends Model
 
     protected $fillable = [
         'title',
+        'financial_year',
         'compliance_type',
         'client_id',
         'assigned_to',
@@ -35,6 +37,9 @@ class ComplianceDeadline extends Model
         'status',
         'priority',
         'description',
+        'srn',
+        'filing_date',
+        'acknowledgement_reference',
         'completed_at',
     ];
 
@@ -43,6 +48,7 @@ class ComplianceDeadline extends Model
         return [
             'due_date' => 'date',
             'reminder_date' => 'date',
+            'filing_date' => 'date',
             'completed_at' => 'datetime',
         ];
     }
@@ -72,4 +78,3 @@ class ComplianceDeadline extends Model
         return self::STATUSES[$this->status] ?? ucfirst($this->status);
     }
 }
-
