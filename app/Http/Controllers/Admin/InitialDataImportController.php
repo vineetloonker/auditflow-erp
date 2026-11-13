@@ -101,6 +101,7 @@ class InitialDataImportController extends Controller
                     'due_date' => $this->dateValue($row['Due Date']),
                     'reminder_date' => $this->dateValue($row['Reminder Date']),
                     'status' => $status,
+                    'completed_at' => $status === 'completed' ? now() : null,
                     'priority' => $this->priorityValue($row['Priority']),
                     'description' => $this->nullable($row['Description / Notes']),
                     'srn' => $this->nullable($row['SRN']),
@@ -126,6 +127,7 @@ class InitialDataImportController extends Controller
                     'priority' => $this->priorityValue($row['Priority']),
                     'status' => $this->taskStatus($row['Status']),
                     'due_date' => $this->dateValue($row['Due Date']),
+                    'completed_at' => strtolower(trim($row['Status'])) === 'completed' ? now() : null,
                 ]);
 
                 TaskActivity::create([
