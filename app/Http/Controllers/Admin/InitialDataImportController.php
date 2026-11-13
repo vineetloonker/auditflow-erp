@@ -264,7 +264,7 @@ class InitialDataImportController extends Controller
             $complianceKeys[$complianceKey] = true;
             $existingClientId = Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->value('id');
             $complianceTitle = trim($row['Compliance/Form Name']).($this->nullable($row['Financial Year']) ? ' - FY '.$row['Financial Year'] : '');
-            if ($existingClientId && ComplianceDeadline::where('client_id', $existingClientId)->where('title', $complianceTitle)->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
+            if ($existingClientId && $this->validDate($row['Due Date']) && ComplianceDeadline::where('client_id', $existingClientId)->where('title', $complianceTitle)->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
                 $result['errors'][] = 'Compliance Register, record '.($index + 1).': this compliance record already exists in AuditFlow.';
             }
             if ($identifier !== '' && ! isset($knownIdentifiers[$identifier]) && ! Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->exists()) {
@@ -287,7 +287,7 @@ class InitialDataImportController extends Controller
             }
             $taskKeys[$taskKey] = true;
             $existingClientId = $identifier !== '' ? Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->value('id') : null;
-            if (Task::where('client_id', $existingClientId)->where('title', trim($row['Task Title']))->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
+            if ($this->validDate($row['Due Date']) && Task::where('client_id', $existingClientId)->where('title', trim($row['Task Title']))->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
                 $result['errors'][] = 'Task Register, record '.($index + 1).': this task already exists in AuditFlow.';
             }
             if ($identifier !== '' && ! isset($knownIdentifiers[$identifier]) && ! Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->exists()) {
