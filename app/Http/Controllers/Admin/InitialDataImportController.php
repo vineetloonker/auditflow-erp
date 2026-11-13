@@ -62,7 +62,7 @@ class InitialDataImportController extends Controller
 
             foreach ($payload['rows']['clients'] as $row) {
                 $entityType = strtolower(trim($row['Entity Type']));
-                $isLlp = str_contains($entityType, 'llp');
+                $isLlp = str_contains($entityType, 'llp') || str_contains($entityType, 'limited liability partnership');
                 $identifier = strtoupper(trim($isLlp ? $row['LLPIN'] : $row['CIN']));
 
                 $client = Client::create([
@@ -230,8 +230,22 @@ class InitialDataImportController extends Controller
                     }
                     $clientRows[] = $mapped;
                 }
-                if ($definition['key'] === 'compliances' && strtoupper($mapped['Applicable (Yes/No)']) !== 'YES') {
-                    continue;
+                if ($definition['key'] === 'clients') {
+                    if ($mapped['Contact Email'] !== '' && ! filter_var($mapped['Contact Email'], FILTER_VALIDATE_EMAIL)) {
+                        $result['errors'][] = "{$sheetName}, row {$line}: Contact Email is invalid.";
+                    }
+                    if ($mapped['Registration Date'] !== '' && ! $this->validDate($mapped['Registration Date'])) {
+                        $result['errors'][] = "{$sheetName}, row {$line}: Registration Date is invalid.";
+                    }
+                }
+                if ($definition['key'] === 'compliances') {
+                    $applicable = strtoupper($mapped['Applicable (Yes/No)']);
+                    if (! in_array($applicable, ['YES', 'NO'], true)) {
+                        $result['errors'][] = "{$sheetName}, row {$line}: Applicable (Yes/No) must be Yes or No.";
+                    }
+                    if ($applicable !== 'YES') {
+                        continue;
+                    }
                 }
                 $mappedRows[] = $mapped;
             }
@@ -240,8 +254,19 @@ class InitialDataImportController extends Controller
             $result['counts'][$definition['key']] = count($mappedRows);
         }
 
+        $complianceKeys = [];
         foreach ($result['rows']['compliances'] as $index => $row) {
             $identifier = strtoupper(trim($row['Client CIN/LLPIN']));
+            $complianceKey = $identifier.'|'.strtolower(trim($row['Compliance/Form Name'])).'|'.trim($row['Financial Year']).'|'.trim($row['Due Date']);
+            if (isset($complianceKeys[$complianceKey])) {
+                $result['errors'][] = 'Compliance Register, record '.($index + 1).': duplicate compliance record in this workbook.';
+            }
+            $complianceKeys[$complianceKey] = true;
+            $existingClientId = Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->value('id');
+            $complianceTitle = trim($row['Compliance/Form Name']).($this->nullable($row['Financial Year']) ? ' - FY '.$row['Financial Year'] : '');
+            if ($existingClientId && ComplianceDeadline::where('client_id', $existingClientId)->where('title', $complianceTitle)->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
+                $result['errors'][] = 'Compliance Register, record '.($index + 1).': this compliance record already exists in AuditFlow.';
+            }
             if ($identifier !== '' && ! isset($knownIdentifiers[$identifier]) && ! Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->exists()) {
                 $result['errors'][] = 'Compliance Register, record '.($index + 1).": client identifier {$identifier} was not found in Client Master or AuditFlow.";
             }
@@ -253,8 +278,18 @@ class InitialDataImportController extends Controller
             }
         }
 
+        $taskKeys = [];
         foreach ($result['rows']['tasks'] as $index => $row) {
             $identifier = strtoupper(trim($row['Client CIN/LLPIN']));
+            $taskKey = $identifier.'|'.strtolower(trim($row['Task Title'])).'|'.trim($row['Due Date']);
+            if (isset($taskKeys[$taskKey])) {
+                $result['errors'][] = 'Task Register, record '.($index + 1).': duplicate task in this workbook.';
+            }
+            $taskKeys[$taskKey] = true;
+            $existingClientId = $identifier !== '' ? Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->value('id') : null;
+            if (Task::where('client_id', $existingClientId)->where('title', trim($row['Task Title']))->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
+                $result['errors'][] = 'Task Register, record '.($index + 1).': this task already exists in AuditFlow.';
+            }
             if ($identifier !== '' && ! isset($knownIdentifiers[$identifier]) && ! Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->exists()) {
                 $result['errors'][] = 'Task Register, record '.($index + 1).": client identifier {$identifier} was not found in Client Master or AuditFlow.";
             }
