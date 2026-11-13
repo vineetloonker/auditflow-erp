@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\Admin\InitialDataImportController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ClientController;
@@ -33,6 +34,13 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'role:super_admin,partner,manager,employee'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', [DashboardController::class, 'search'])->name('global.search');
+
+    // Admin-only one-time initial data import
+    Route::prefix('admin')->name('admin.')->middleware('role:super_admin')->group(function () {
+        Route::get('/initial-data-import', [InitialDataImportController::class, 'index'])->name('initial-import.index');
+        Route::post('/initial-data-import/preview', [InitialDataImportController::class, 'preview'])->name('initial-import.preview');
+        Route::post('/initial-data-import/confirm', [InitialDataImportController::class, 'confirm'])->name('initial-import.confirm');
+    });
 
     // Clients CRM
     Route::resource('clients', ClientController::class);
