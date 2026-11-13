@@ -214,7 +214,7 @@ class InitialDataImportController extends Controller
 
                 if ($definition['key'] === 'clients') {
                     $entity = strtolower($mapped['Entity Type']);
-                    $isLlp = str_contains($entity, 'llp');
+                    $isLlp = str_contains($entity, 'llp') || str_contains($entity, 'limited liability partnership');
                     $idField = $isLlp ? 'LLPIN' : 'CIN';
                     $identifier = strtoupper($mapped[$idField]);
                     if ($identifier === '') {
@@ -363,7 +363,8 @@ class InitialDataImportController extends Controller
     {
         return match (strtolower(trim((string) $value))) {
             'roc / mca', 'llp compliance' => 'roc',
-            'tax', 'gst' => 'gst',
+            'gst' => 'gst',
+            'tax' => 'advisory',
             'audit' => 'audit',
             'general' => 'general',
             default => 'roc',
