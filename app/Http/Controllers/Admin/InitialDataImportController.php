@@ -241,6 +241,11 @@ class InitialDataImportController extends Controller
                     }
                 }
                 if ($definition['key'] === 'compliances') {
+                    foreach (['Due Date', 'Reminder Date', 'Filing Date'] as $dateField) {
+                        if ($mapped[$dateField] !== '' && ! $this->validDate($mapped[$dateField])) {
+                            $result['errors'][] = "{$sheetName}, row {$line}: {$dateField} is invalid.";
+                        }
+                    }
                     $applicable = strtoupper($mapped['Applicable (Yes/No)']);
                     if (! in_array($applicable, ['YES', 'NO'], true)) {
                         $result['errors'][] = "{$sheetName}, row {$line}: Applicable (Yes/No) must be Yes or No.";
