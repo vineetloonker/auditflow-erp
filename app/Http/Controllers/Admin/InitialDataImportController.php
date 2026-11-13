@@ -15,7 +15,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
-use RuntimeException;
 use Throwable;
 
 class InitialDataImportController extends Controller
@@ -77,7 +76,7 @@ class InitialDataImportController extends Controller
                     'tan' => $this->nullableUpper($row['TAN']),
                     'cin' => $isLlp ? null : $this->nullableUpper($row['CIN']),
                     'llpin' => $isLlp ? $this->nullableUpper($row['LLPIN']) : null,
-                    'business_type' => $this->nullable($row['Entity Type']),
+                    'business_type' => $this->nullable($row['Business Type']) ?? $this->nullable($row['Entity Type']),
                     'registration_date' => $this->dateValue($row['Registration Date']),
                     'status' => 'active',
                 ]);
@@ -90,7 +89,7 @@ class InitialDataImportController extends Controller
 
             foreach ($payload['rows']['compliances'] as $row) {
                 $clientId = $this->resolveClientId($row['Client CIN/LLPIN'], $clientMap);
-                $type = strtolower(trim($row['Compliance Type'])) === 'llp' ? 'roc' : 'roc';
+                $type = strtolower(trim($row['Compliance Type'])) === 'llp' ? 'llp' : 'roc';
                 $status = $this->complianceStatus($row['Status']);
 
                 ComplianceDeadline::create([
@@ -167,7 +166,6 @@ class InitialDataImportController extends Controller
 
         $result = ['rows' => ['clients' => [], 'compliances' => [], 'tasks' => []], 'errors' => [], 'counts' => []];
         $knownIdentifiers = [];
-        $clientRows = [];
 
         foreach ($definitions as $sheetName => $definition) {
             if (! isset($sheets[$sheetName])) {
@@ -230,7 +228,6 @@ class InitialDataImportController extends Controller
                     if ($identifier !== '' && Client::withTrashed()->where($isLlp ? 'llpin' : 'cin', $identifier)->exists()) {
                         $result['errors'][] = "{$sheetName}, row {$line}: CIN/LLPIN {$identifier} already exists in AuditFlow.";
                     }
-                    $clientRows[] = $mapped;
                 }
                 if ($definition['key'] === 'clients') {
                     if ($mapped['Contact Email'] !== '' && ! filter_var($mapped['Contact Email'], FILTER_VALIDATE_EMAIL)) {
@@ -405,7 +402,8 @@ class InitialDataImportController extends Controller
     private function taskCategory(?string $value): string
     {
         return match (strtolower(trim((string) $value))) {
-            'roc / mca', 'llp compliance' => 'roc',
+            'roc / mca' => 'roc',
+            'llp compliance' => 'llp',
             'gst' => 'gst',
             'tax' => 'advisory',
             'audit' => 'audit',
