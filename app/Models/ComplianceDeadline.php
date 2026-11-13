@@ -13,6 +13,7 @@ class ComplianceDeadline extends Model
         'tds' => 'TDS',
         'advance_tax' => 'Advance Tax',
         'roc' => 'ROC Compliance',
+        'llp' => 'LLP Compliance',
         'audit' => 'Audit',
         'custom' => 'Custom Reminder',
     ];
