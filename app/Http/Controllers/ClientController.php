@@ -209,6 +209,7 @@ class ClientController extends Controller
             'gstin' => ['nullable', 'string', 'max:20'],
             'tan' => ['nullable', 'string', 'max:20'],
             'cin' => ['nullable', 'string', 'max:30'],
+            'llpin' => ['nullable', 'string', 'max:30'],
             'business_type' => ['nullable', 'string', 'max:100'],
             'industry' => ['nullable', 'string', 'max:100'],
             'assigned_ca_id' => ['nullable', 'exists:users,id'],
