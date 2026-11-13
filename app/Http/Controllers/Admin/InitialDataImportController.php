@@ -408,7 +408,7 @@ class InitialDataImportController extends Controller
             'tax' => 'advisory',
             'audit' => 'audit',
             'general', 'other' => 'general',
-            default => 'roc',
+            default => 'general',
         };
     }
 }
