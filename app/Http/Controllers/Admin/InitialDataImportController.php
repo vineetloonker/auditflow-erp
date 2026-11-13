@@ -24,7 +24,8 @@ class InitialDataImportController extends Controller
 
     public function index(): View
     {
-        return view('admin.initial-data-import');
+        $logs = DB::table('initial_data_import_logs')->latest()->limit(10)->get();
+        return view('admin.initial-data-import', compact('logs'));
     }
 
     public function preview(Request $request, XlsxWorkbookReader $reader): View|RedirectResponse
