@@ -287,7 +287,7 @@ class InitialDataImportController extends Controller
             }
             $taskKeys[$taskKey] = true;
             $existingClientId = $identifier !== '' ? Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->value('id') : null;
-            if ($this->validDate($row['Due Date']) && Task::where('client_id', $existingClientId)->where('title', trim($row['Task Title']))->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
+            if ($existingClientId && $this->validDate($row['Due Date']) && Task::where('client_id', $existingClientId)->where('title', trim($row['Task Title']))->whereDate('due_date', $this->dateValue($row['Due Date']))->exists()) {
                 $result['errors'][] = 'Task Register, record '.($index + 1).': this task already exists in AuditFlow.';
             }
             if ($identifier !== '' && ! isset($knownIdentifiers[$identifier]) && ! Client::where(fn ($q) => $q->where('cin', $identifier)->orWhere('llpin', $identifier))->exists()) {
