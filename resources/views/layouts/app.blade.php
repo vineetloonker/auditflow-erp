@@ -40,6 +40,9 @@
     if ($user && $user->isAdminOrPartner()) {
         $navItems['Insights & Admin'][] = ['route' => 'settings.index', 'pattern' => 'settings.*', 'icon' => 'bi-sliders', 'label' => 'Settings & Audit Logs'];
     }
+    if ($user && $user->hasRole('super_admin')) {
+        $navItems['Insights & Admin'][] = ['route' => 'admin.initial-import.index', 'pattern' => 'admin.initial-import.*', 'icon' => 'bi-file-earmark-spreadsheet', 'label' => 'Initial Data Import'];
+    }
 @endphp
 
 <div class="ca-shell">
