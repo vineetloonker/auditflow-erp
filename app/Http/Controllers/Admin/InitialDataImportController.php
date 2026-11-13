@@ -367,7 +367,7 @@ class InitialDataImportController extends Controller
             'gst' => 'gst',
             'tax' => 'advisory',
             'audit' => 'audit',
-            'general' => 'general',
+            'general', 'other' => 'general',
             default => 'roc',
         };
     }
