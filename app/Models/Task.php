@@ -14,6 +14,7 @@ class Task extends Model
         'tds' => 'TDS Compliance',
         'audit' => 'Audit & Assurance',
         'roc' => 'ROC / MCA',
+        'llp' => 'LLP Compliance',
         'advisory' => 'Tax Advisory',
         'billing' => 'Billing & Accounts',
         'general' => 'General Practice',
