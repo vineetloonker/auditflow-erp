@@ -65,4 +65,26 @@
 <div class="alert alert-info small">
     <strong>Important:</strong> This utility creates client records and initial compliance / task entries. It does not file forms with the MCA, create client portal logins, or decide statutory applicability. Confirm due dates and applicability before uploading.
 </div>
+
+@if(isset($logs) && $logs->isNotEmpty())
+<div class="ca-card p-3 mt-3">
+    <h2 class="h6 fw-bold mb-3">Recent import history</h2>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Date</th><th>File</th><th>Clients</th><th>Compliance</th><th>Tasks</th></tr></thead>
+            <tbody>
+            @foreach($logs as $log)
+                <tr>
+                    <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d M Y, h:i A') }}</td>
+                    <td>{{ $log->filename }}</td>
+                    <td>{{ $log->clients_imported }}</td>
+                    <td>{{ $log->compliances_imported }}</td>
+                    <td>{{ $log->tasks_imported }}</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+@endif
 @endsection
