@@ -11,7 +11,10 @@ class XlsxWorkbookReader
     public function read(string $path): array
     {
         if (! class_exists(ZipArchive::class)) {
-            throw new RuntimeException('The PHP zip extension is required to read Excel workbooks.');
+            throw new RuntimeException('The PHP zip extension is required to read Excel workbooks. Please enable ext-zip on the server.');
+        }
+        if (! class_exists(DOMDocument::class)) {
+            throw new RuntimeException('The PHP DOM extension is required to read Excel workbooks. Please enable ext-dom on the server.');
         }
 
         $zip = new ZipArchive();
