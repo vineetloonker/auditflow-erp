@@ -31,6 +31,27 @@
                 <div class="col-md-4"><div class="border rounded p-3"><div class="small text-muted">{{ $label }}</div><div class="h4 mb-0">{{ $preview['counts'][$key] ?? 0 }}</div></div></div>
             @endforeach
         </div>
+        @foreach([
+            'clients' => ['title' => 'Client sample', 'fields' => ['Client Name', 'Entity Type', 'CIN', 'LLPIN']],
+            'compliances' => ['title' => 'Compliance sample', 'fields' => ['Client CIN/LLPIN', 'Compliance/Form Name', 'Financial Year', 'Due Date']],
+            'tasks' => ['title' => 'Task sample', 'fields' => ['Client CIN/LLPIN', 'Task Title', 'Category', 'Due Date']],
+        ] as $key => $sample)
+            @if(!empty($preview['rows'][$key]))
+                <div class="mt-3">
+                    <div class="fw-semibold small mb-2">{{ $sample['title'] }} (first five records)</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead><tr>@foreach($sample['fields'] as $field)<th>{{ $field }}</th>@endforeach</tr></thead>
+                            <tbody>
+                            @foreach(array_slice($preview['rows'][$key], 0, 5) as $row)
+                                <tr>@foreach($sample['fields'] as $field)<td>{{ $row[$field] ?? '—' }}</td>@endforeach</tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+        @endforeach
         @if(!empty($preview['errors']))
             <div class="alert alert-danger mb-0">
                 <div class="fw-semibold">Import blocked — {{ count($preview['errors']) }} issue(s) found.</div>
