@@ -39,6 +39,7 @@ class Client extends Model
         'gstin',
         'tan',
         'cin',
+        'llpin',
         'business_type',
         'industry',
         'registration_date',
@@ -133,4 +134,3 @@ class Client extends Model
             ->sum('balance_amount');
     }
 }
-
